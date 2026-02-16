@@ -12,13 +12,6 @@ public class Dictionary<K, V> {
 	}
 
 	public void add(K key, V value) {
-		int index = key.hashCode() % hashtable.length;
-
-		if(hashtable[index] == null || hashtable[index].equals(DUMMY)) {
-			hashtable[index] = value;
-			return;
-		}
-
 
 	}
 }
