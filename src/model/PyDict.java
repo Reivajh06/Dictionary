@@ -26,6 +26,7 @@ public class PyDict<K, V> {
 	private int nextEntryIndex = 0;
 
 	private int nItems;
+	private int nDummies;
 
 	public static <K, V> PyDict<K, V> fromKeys(K[] keys, V initialValue) {
 		return new PyDict<>(keys, initialValue);
@@ -50,7 +51,7 @@ public class PyDict<K, V> {
 
 	public PyDict() {
 		indices = new int[BASELENGTH];
-		fill(indices, -1);
+		fill(indices, DKIXEMPTY);
 		entries = new Entry[BASELENGTH];
 		mask = BASELENGTH - 1;
 
@@ -61,7 +62,7 @@ public class PyDict<K, V> {
 		if(keys.length != values.length) throw new IllegalArgumentException("keys and values arrays lengths do not match");
 
 		indices = new int[keys.length * 2];
-		fill(indices, -1);
+		fill(indices, DKIXEMPTY);
 		entries = new Entry[keys.length * 2];
 		mask = indices.length - 1;
 		nItems = 0;
@@ -121,8 +122,10 @@ public class PyDict<K, V> {
 	public void clear() {
 		entries = new Entry[entries.length];
 		indices = new int[indices.length];
+		fill(indices, DKIXEMPTY);
 		nItems = 0;
 		nextEntryIndex = 0;
+		nDummies = 0;
 	}
 
 	public PyDict<K, V> copy() {
@@ -156,11 +159,12 @@ public class PyDict<K, V> {
 			} else {
 				if(indices[index] == DKIXEMPTY) {
 					index = firstDummyPos;
+					nDummies--;
 					break;
 				}
 			}
 
-			if(entries[indices[index]].key.equals(key)) {
+			if(indices[index] != DKIXDUMMY && entries[indices[index]] != null && entries[indices[index]].key.equals(key)) {
 				entries[indices[index]] = new Entry<>(key, value, key.hashCode());
 				return;
 			}
@@ -186,7 +190,7 @@ public class PyDict<K, V> {
 		while(true) {
 			if(indices[index] == DKIXEMPTY) return null;
 
-			if(entries[indices[index]].key.equals(key)) {
+			if(indices[index] != DKIXDUMMY && entries[indices[index]] != null && entries[indices[index]].key.equals(key)) {
 				return entries[indices[index]].value;
 			}
 
@@ -206,7 +210,7 @@ public class PyDict<K, V> {
 		while(true) {
 			if(indices[index] == DKIXEMPTY) throw new IllegalArgumentException("Key %s not found".formatted(key));
 
-			if(entries[indices[index]].key.equals(key)) {
+			if(indices[index] >= 0 && entries[indices[index]] != null && entries[indices[index]].key.equals(key)) {
 				break;
 			}
 
@@ -215,19 +219,15 @@ public class PyDict<K, V> {
 			index = j & mask;
 		}
 
-		//Should eliminate entry of key and readjust array
-		//Do NOT reduce array length, just readjust insertion order of the entries array
 		V val = entries[indices[index]].value;
 
 		entries[indices[index]] = null;
 		indices[index] = DKIXDUMMY;
 
-		if(index != indices.length - 1) {
-			System.arraycopy(indices, index + 1, indices, index, indices.length - (index + 1));
-			System.arraycopy(entries, index + 1, entries, index, entries.length - (index  + 1));
-		}
-
 		nItems--;
+		nDummies++;
+
+		rebuild();
 
 		return val;
 	}
@@ -242,7 +242,7 @@ public class PyDict<K, V> {
 		while(true) {
 			if(indices[index] == DKIXEMPTY) return defaultValue;
 
-			if(entries[indices[index]].key.equals(key)) {
+			if(indices[index] >= 0 && entries[indices[index]] != null && entries[indices[index]].key.equals(key)) {
 				break;
 			}
 
@@ -251,21 +251,31 @@ public class PyDict<K, V> {
 			index = j & mask;
 		}
 
-		//Should eliminate entry of key and readjust array
-		//Do NOT reduce array length, just readjust insertion order of the entries array
 		V val = entries[indices[index]].value;
 
 		entries[indices[index]] = null;
 		indices[index] = DKIXDUMMY;
 
-		if(index != indices.length - 1) {
-			System.arraycopy(indices, index + 1, indices, index, indices.length - (index + 1));
-			System.arraycopy(entries, index + 1, entries, index, entries.length - (index  + 1));
-		}
-
 		nItems--;
+		nDummies++;
+
+		rebuild();
 
 		return val;
+	}
+
+	private void rebuild() {
+		if(nDummies > nItems) {
+			Entry<K, V>[] entriesBuffer = entries;
+
+			clear();
+
+			for(Entry<K, V> e : entriesBuffer) {
+				if(e == null) continue;
+
+				put(e.key, e.value);
+			}
+		}
 	}
 
 	public Pair popItem() {
@@ -279,22 +289,16 @@ public class PyDict<K, V> {
 		int j = perturb;
 		int index = j & mask;
 
-		while(true) {
-			if(indices[index] == DKIXEMPTY) return null;
-
-			if(entries[indices[index]].key.equals(e.key)) {
-				Pair p = new Pair(e.key, e.value);
-				entries[indices[index]] = null;
-				indices[index] = DKIXDUMMY;
-				nextEntryIndex--;
-				nItems--;
-				return p;
-			}
-
-			perturb >>>= PERTURBSHIFT;
-			j = (5 * j) + 1 + perturb;
-			index = j & mask;
+		while(i >= 0 && entries[i] == null) {
+			i--;
 		}
+
+		if(i < 0) throw new IndexOutOfBoundsException("PyDict is empty");
+
+		Pair p = new Pair(entries[i].key, entries[i].value);
+		pop(entries[i].key);
+
+		return p;
 	}
 
 	public void update(PyDict<K, V> otherDict) {
@@ -320,8 +324,8 @@ public class PyDict<K, V> {
 				.toArray(arrayProvider);
 	}
 
-	public V[] values() {
-		return (V[]) Stream.of(entries)
+	public Object[] values() {
+		return Stream.of(entries)
 				.filter(Objects::nonNull)
 				.map(Entry::value)
 				.toArray(Object[]::new);
