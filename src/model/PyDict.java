@@ -195,6 +195,10 @@ public class PyDict<K, V> {
 		}
 	}
 
+	public int size() {
+		return nItems;
+	}
+
 	public V pop(K key) {
 		if(nItems == 0) throw new IllegalArgumentException("Key %s not found".formatted(key));
 
