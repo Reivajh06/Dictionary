@@ -7,12 +7,7 @@ import java.util.stream.Stream;
 @SuppressWarnings("all")
 public class PyDict<K, V> {
 
-/*
-	Missing / TODO:
-	- setdefault
-	 */
-
-	private static final int EXPANSIONFACTOR = 75;
+	private static final int EXPANSIONFACTOR = 66;
 
 	private static final int DKIXEMPTY = -1;
 	private static final int DKIXDUMMY = -2;
@@ -305,6 +300,12 @@ public class PyDict<K, V> {
 		for(Pair<K, V> pair : otherDict.items()) {
 			put(pair.key, pair.value);
 		}
+	}
+
+	public V setDefault(K key, V defaultValue) {
+		if(get(key) == null) put(key, defaultValue);
+
+		return get(key);
 	}
 
 	public Object[] keys() {
