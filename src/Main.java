@@ -16,5 +16,6 @@ public class Main {
 		System.out.println(dict.setDefault("D", 2));
 		System.out.println(dict.setDefault("A", 30));
 		System.out.println(Arrays.toString(dict.items()));
+		System.out.println(dict);
 	}
 }

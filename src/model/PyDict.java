@@ -1,5 +1,6 @@
 package model;
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.function.IntFunction;
 import java.util.stream.Stream;
@@ -56,6 +57,10 @@ public class PyDict<K, V> {
 	public PyDict(K[] keys, V[] values) {
 		if(keys.length != values.length) throw new IllegalArgumentException("keys and values arrays lengths do not match");
 
+		if(keys.length == 0) throw new IllegalArgumentException("Keys and Values must be size greater than zero");
+
+		if(keys[0] instanceof Collection<?>) throw new IllegalArgumentException("Keys type must be inmutable");
+
 		indices = new int[keys.length * 2];
 		fill(indices, DKIXEMPTY);
 		entries = new Entry[keys.length * 2];
@@ -72,6 +77,10 @@ public class PyDict<K, V> {
 	*
 	* */
 	public PyDict(K[] keys, V initialValue) {
+		if(keys.length == 0) throw new IllegalArgumentException("Keys array must contain at least one element");
+
+		if(keys[0] instanceof Collection) throw new IllegalArgumentException("Keys must be inmutable");
+
 		indices = new int[keys.length * 2];
 		fill(indices, -1);
 		entries = new Entry[keys.length * 2];
@@ -351,7 +360,31 @@ public class PyDict<K, V> {
 				.toArray(Pair[]::new);
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder repr = new StringBuilder();
+
+		repr.append("{");
+
+		for(int i = 0; i < entries.length - 1; i++) {
+			if(entries[i] == null) continue;
+
+			repr.append(entries[i].toString());
+
+			repr.append(", ");
+		}
+
+		repr.delete(repr.lastIndexOf(", "), repr.length());
+		repr.append("}");
+
+		return repr.toString();
+	}
+
 	private record Entry<K, V>(K key, V value, int hash) {
+
+		public String toString() {
+			return "%s: %s".formatted(key, value);
+		}
 	}
 
 	public record Pair<K, V>(K key, V value) {
