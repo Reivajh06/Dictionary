@@ -85,4 +85,20 @@ public class Pop1Tests{
         int pop_value = dict.pop("A");
         assertEquals(1, pop_value);
     }
+    
+    /**
+     * Test to pop an item that belongs to the dictionary.
+     * It checks that the item is removed from the dictionary
+     */
+    @Test
+    public void popNotNullValidKeyNotEmptyDict2(){
+        dict = dict.of(
+            "A", 1,
+            "B", 2,
+            "C", 3
+        );
+        
+        dict.pop("A");
+        assertEquals("[[B, 2], [C, 3]]", Arrays.toString(dict.items()));
+    }
 }
