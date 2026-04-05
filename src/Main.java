@@ -11,6 +11,10 @@ import org.junit.runners.Suite.SuiteClasses;
                tests.SizeTests.class, tests.Pop1Tests.class,
                tests.Pop2Tests.class, tests.PopItemTests.class,
                tests.UpdateTests.class, tests.ContainsKeyTests.class,
+               tests.SetDefaultTests.class, tests.Keys1Tests.class,
+               tests.Keys2Tests.class, tests.Values1Tests.class,
+               tests.Values2Tests.class, tests.ItemsTests.class,
+               tests.ToStringTests.class
 })
 
 public class Main {
@@ -28,6 +32,7 @@ public class Main {
         System.out.println(dict.setDefault("D", 2));
         System.out.println(dict.setDefault("A", 30));
         System.out.println(Arrays.toString(dict.items()));
+        System.out.println(Arrays.toString(dict.keys()));
     }
 }
 
